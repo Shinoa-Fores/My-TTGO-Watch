@@ -1,10 +1,3 @@
-<p align="center">
-<img src="https://img.shields.io/github/last-commit/sharandac/My-TTGO-Watch.svg?style=for-the-badge" />
-&nbsp;
-<img src="https://img.shields.io/github/license/sharandac/My-TTGO-Watch.svg?style=for-the-badge" />
-&nbsp;
-<a href="https://www.buymeacoffee.com/sharandac" target="_blank"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-%E2%82%AC5-orange?style=for-the-badge&logo=buy-me-a-coffee" /></a>
-</p>
 <hr/>
 
 # My-TTGO-Watch
@@ -49,8 +42,16 @@ A GUI named hedge for smartwatch like devices based on ESP32. Currently support 
 
 ## Install
 
-Clone this repository and open it with platformIO. Select the right env and then build and upload.
-Or follow the great step by step [tutorial](https://www.youtube.com/watch?v=wUGADCnerCs) from [ShotokuTech](https://github.com/ShotokuTech).
+Clone this repository.
+
+Install PlatformIO core:
+```bash
+pip install -U platformio
+```
+Build and upload:
+```bash
+pio run -t upload
+```
 
 Please check out
     https://github.com/sharandac/My-TTGO-Watch/blob/709ed0c5863435aa966c1d6f44552ddc0909a57c/src/hardware/wifictl.cpp#L256-L261
