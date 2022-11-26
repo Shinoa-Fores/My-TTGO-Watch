@@ -13,6 +13,7 @@
 #include "app/osmmap/osmmap_app.h"
 #include "app/mail/mail_app.h"
 #include "app/sailing/sailing.h"
+#include "app/sshclient/sshclient_app.h"
 #include "app/stopwatch/stopwatch_app.h"
 #include "app/astro/astro_app.h"
 #include "app/wifimon/wifimon_app.h"
@@ -71,6 +72,7 @@ void setup() {
     wifimon_app_setup();
     calc_app_setup();
     kodi_remote_app_setup();
+    sshclient_app_setup();
     /**
      * post hardware setup
      */
