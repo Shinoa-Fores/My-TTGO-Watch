@@ -25,6 +25,7 @@
 #include "app/IRController/IRController.h"
 #include "app/alarm_clock/alarm_clock.h"
 #include "app/compass/compass_app.h"
+#include "app/my_basic/my_basic_app.h"
 
 #if defined( NATIVE_64BIT )
     /**
@@ -73,6 +74,8 @@ void setup() {
     calc_app_setup();
     kodi_remote_app_setup();
     sshclient_app_setup();
+    my_basic_app_setup();
+    
     /**
      * post hardware setup
      */
