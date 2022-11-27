@@ -12,7 +12,6 @@
 #include "app/powermeter/powermeter_app.h"
 #include "app/osmmap/osmmap_app.h"
 #include "app/mail/mail_app.h"
-#include "app/sailing/sailing.h"
 #include "app/sshclient/sshclient_app.h"
 #include "app/stopwatch/stopwatch_app.h"
 #include "app/astro/astro_app.h"
@@ -65,7 +64,6 @@ void setup() {
     mail_app_setup();
     gps_status_setup();
     IRController_setup();
-    sailing_setup();
     osmand_app_setup();
     fxrates_app_setup();
     powermeter_app_setup();
@@ -83,5 +81,6 @@ void setup() {
 }
 
 void loop(){
+    delay(5);
     powermgm_loop();
 }
