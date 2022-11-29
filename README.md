@@ -2,7 +2,7 @@
 
 # My-TTGO-Watch
 
-A GUI named hedge for smartwatch like devices based on ESP32. Currently support for T-Watch2020 (V1,V2,V3), T-Watch2021  (V1 and V2, no ota-updates), M5Paper, M5Core2, WT32-SC01 and native Linux support for testing. This fork has a BASIC interpreter as found in FantasyFactory's fork of this repo.
+A GUI named hedge for smartwatch like devices based on ESP32. Currently support for T-Watch2020 (V1,V2,V3), T-Watch2021. This fork has a BASIC interpreter as found in FantasyFactory's fork of this repo.
 
 ## Features
 
@@ -63,34 +63,10 @@ Please check out
   https://github.com/Shinoa-Fores/My-TTGO-Watch/blob/709ed0c5863435aa966c1d6f44552ddc0909a57c/src/hardware/wifictl.cpp#L256-L261
 to setup your wifi when wps or input via display is not possible.
 
-If you are interested in native Linux support, please install sdl2, curl and mosquitto dev lib and change the env to emulator_* in platformIO.
-
-```bash
-sudo apt-get install libsdl2-dev libcurl4-gnutls-dev libmosquitto-dev build-essential
-```
-
 # Known issues
 
 * the webserver crashes the ESP32 really often
 * the battery indicator is not accurate, rather a problem with the power management unit ( axp202 )
-
-## Development on the Windows platform
-
-The development tools have a known issue with the size of the project on Windows platforms. When the program is built you may receive the following error:
-
-    xtensa-esp32-elf-g++: error: CreateProcess: No such file or directory
-    *** [.pio\build\t-watch2020-v1\firmware.elf] Error 1
-
-This issue has not been seen on Linux or other platforms. If you must compile on Windows you may work around this linker issue by removing apps you do not use from the .\src\main.cpp file.
-
-You might remove the example app commenting out these lines by adding two slashes (```//```) on these locations:
-
-* main.cpp line 9:  ```//#include "app/example_app/example_app.h"```
-* main.cpp line 65: ```//  example_app_setup();```
-
-(Line numbers are approximate and may change as the system develops.)
-
-Since each app includes a different set of files, you may need to comment out several apps to reduce it small enough for the Windows build.
 
 # How to use
 
@@ -125,25 +101,6 @@ Cf. [contribution guide](CONTRIBUTING.md)
 ![screenshot](images/screen10.png)
 ![screenshot](images/screen11.png)
 ![screenshot](images/screen12.png)
-
-## M5Paper ( downscaled )
-
-![screenshot](images/image1.png)
-![screenshot](images/image2.png)
-![screenshot](images/image3.png)
-
-## M5Core2
-
-![screenshot](images/m5core2_img1.png)
-![screenshot](images/m5core2_img2.png)
-![screenshot](images/m5core2_img3.png)
-![screenshot](images/m5core2_img4.png)
-
-## WT32-SC01
-
-![screenshot](images/WT32_SC01_img1.png)
-![screenshot](images/WT32_SC01_img2.png)
-![screenshot](images/WT32_SC01_img3.png)
 
 ## TTGO T-Watch 2021
 
@@ -187,8 +144,4 @@ and the following projects:
 [TTGO_TWatch_Library](https://github.com/Xinyuan-LilyGO/TTGO_TWatch_Library)<br>
 
 Every Contribution to this repository is highly welcome! Don't fear to create pull requests which enhance or fix the project, you are going to help everybody.
-<p>
-If you want to donate to the author then you can buy me a coffee.
-<br/><br/>
-<a href="https://www.buymeacoffee.com/sharandac" target="_blank"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-%E2%82%AC5-orange?style=for-the-badge&logo=buy-me-a-coffee" /></a>
-</p>
+

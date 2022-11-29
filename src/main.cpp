@@ -81,6 +81,5 @@ void setup() {
 }
 
 void loop(){
-    delay(5);
     powermgm_loop();
 }
