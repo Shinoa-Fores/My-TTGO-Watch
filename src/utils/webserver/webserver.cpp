@@ -21,6 +21,8 @@
  */
 #include "webserver.h"
 #include "config.h"
+#include "gui/screenshot.h"
+#include <soc/rtc_wdt.h>
 
 #if defined( ENABLE_WEBSERVER )
     #ifdef NATIVE_64BIT
@@ -165,11 +167,9 @@
         "<ul>"
         "<li><a target=\"cont\" href=\"/info\">/info</a> - Display information about the device"
         "<li><a target=\"cont\" href=\"/memory\">/memory</a> - Display memory information"
-        "<li><a target=\"cont\" href=\"/battery\">/battery</a> - Display battery charging information"
-        "<li><a target=\"cont\" href=\"/touch\">/touch</a> - Display touch screen information"
         "<li><a target=\"cont\" href=\"/network\">/network</a> - Display network information"
         "<li><a target=\"cont\" href=\"/shot\">/shot</a> - Capture a screen shot"
-        "<li><a target=\"cont\" href=\"/screen.png\">/screen.png</a> - Retrieve the image in png format, open it with gimp"
+        "<li><a target=\"cont\" href=\"/screen.png\">/view</a> - Retrieve and view the screenshot image in png format"
         "<li><a target=\"_blank\" href=\"/edit\">/edit</a> - View, edit, upload, and delete files"
         "</ul>"
         "<p><div style=\"color:red;\">Caution:</div> Use these with care:"
@@ -304,17 +304,18 @@
                     "<b>RSSI: </b>" + String(WiFi.RSSI()) + "dB<br>" +
                     "<b>Hostname: </b>" + WiFi.getHostname() + "<br>" +
                     "<b>SSID: </b>" + WiFi.SSID() + "<br>" +
-                    "<br>Upnp Info: <a target=\"_blank\" href='/description.xml'>description.xml</a>" + "<br>" +
                     "</body></html>";
         request->send(200, "text/html", html);
     });
-    /*
-    asyncserver.on("/shot", HTTP_GET, [](AsyncWebServerRequest * request) {
-        request->send(200, "text/plain", "screen is taken\r\n" );
+
+    asyncserver.on("/shot", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/plain", "Screenshot taken!\r\n" );
+        rtc_wdt_protect_off();
+        rtc_wdt_disable();
         screenshot_take();
-        screenshot_save();
+        screenshot_save();       
     });
-    */
+    
     //start FsEditor with SPIFFS
     setFsEditorFilesystem(SPIFFS);
 
