@@ -101,7 +101,7 @@ void build_settings()
 {
     // Create full options list and attach items to variables
     config.addString("apikey", 32).assign(&apiKey);
-    config.addString("pair1", 12, "EUR_USD").assign(&mainPair);
+    config.addString("pair1", 12, "BTC_USD").assign(&mainPair);
     config.addString("pair2", 12).assign(&secondPair);
     config.addBoolean("autosync", false);
     config.addBoolean("widget", false);
