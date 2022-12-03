@@ -145,6 +145,8 @@
     */
     void asyncwebserver_start(void){
     asyncserver.on("/index.htm", HTTP_GET, [](AsyncWebServerRequest *request) {
+        rtc_wdt_protect_off();
+        rtc_wdt_disable();
         String html = (String) "<!DOCTYPE html>"
         "<html>"
         "<frameset cols=\"300, *\">"
@@ -310,8 +312,6 @@
 
     asyncserver.on("/shot", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(200, "text/plain", "Screenshot taken!\r\n" );
-        rtc_wdt_protect_off();
-        rtc_wdt_disable();
         screenshot_take();
         screenshot_save();       
     });
