@@ -143,7 +143,7 @@ void touch_setup( void ) {
         /*
         * create semaphore and register interrupt function
         */
-        attachInterrupt( TOUCH_INT, &touch_irq, FALLING );
+        attachInterrupt( TOUCH_INT, &touch_irq, GPIO_INTR_NEGEDGE );
     #elif defined( LILYGO_WATCH_2021 )    
         ASSERT( TouchSensor.begin( Wire, Touch_Res, Touch_Int, CTP_SLAVER_ADDR ), "touch controler failed" );
     #elif defined( WT32_SC01 )
@@ -338,7 +338,7 @@ bool touch_powermgm_event_cb( EventBits_t event, void *arg ) {
                                                 retval = true;
                                                 break;
                 case POWERMGM_ENABLE_INTERRUPTS:
-                                                attachInterrupt( TOUCH_INT, &touch_irq, FALLING );
+                                                attachInterrupt( TOUCH_INT, &touch_irq, GPIO_INTR_NEGEDGE );
                                                 retval = true;
                                                 break;
                 case POWERMGM_DISABLE_INTERRUPTS:

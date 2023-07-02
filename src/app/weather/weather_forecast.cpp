@@ -25,7 +25,6 @@
 #include "weather_forecast.h"
 #include "images/resolve_owm_icon.h"
 #include "gui/gui.h"
-#include "gui/mainbar/mainbar.h"
 #include "gui/mainbar/main_tile/main_tile.h"
 #include "gui/statusbar.h"
 #include "gui/keyboard.h"
