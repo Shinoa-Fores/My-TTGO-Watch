@@ -20,7 +20,7 @@
 #include "app/weather/weather.h"
 #include "app/activity/activity.h"
 #include "app/tracker/tracker_app.h"
-#include "app/fx_rates/fx_rates.h"
+#include "app/bc_rates/bc_rates.h"
 #include "app/IRController/IRController.h"
 #include "app/alarm_clock/alarm_clock.h"
 #include "app/compass/compass_app.h"
@@ -65,7 +65,7 @@ void setup() {
     gps_status_setup();
     IRController_setup();
     osmand_app_setup();
-    fxrates_app_setup();
+    bcrates_app_setup();
     powermeter_app_setup();
     FindPhone_setup();
     wifimon_app_setup();
