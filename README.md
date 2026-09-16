@@ -66,7 +66,7 @@ pio device monitor -f esp32_exception_decoder
 
 Please check out
   https://github.com/Shinoa-Fores/My-TTGO-Watch/blob/709ed0c5863435aa966c1d6f44552ddc0909a57c/src/hardware/wifictl.cpp#L256-L261
-to setup your wifi when wps or input via display is not possible.
+to setup your wifi when wps or input via display is not possible. The most reliable method is to set the endpoint to you mobile phone's hotspot in `wificfg.json` and upload to SPIFFS.
 
 # Known issues
 
