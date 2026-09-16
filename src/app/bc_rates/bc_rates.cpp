@@ -6,6 +6,9 @@
 #include "gui/widget_styles.h"
 #include "hardware/wifictl.h"
 
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
+
 // App icon must have an size of 64x64 pixel with an alpha channel
 // Use https://lvgl.io/tools/imageconverter to convert your images and set "true color with alpha"
 LV_IMG_DECLARE(bc_rates_64px);
@@ -14,9 +17,10 @@ LV_FONT_DECLARE(Ubuntu_48px);
 static SynchronizedApplication bcratesApp;
 static JsonConfig config("bc-rates.json");
 
-static String apiKey, mainPair, secondPair;
+static String apiKey, mainPair, secondPair; // Unused but kept for config file compatibility
 static String mainPairValue, secondPairValue, updatedAt;
 static Label lblCurrency1, lblCurrency2, lblUpdatedAt;
+static Label lblTitle1, lblTitle2;
 
 static Style big;
 
@@ -27,9 +31,7 @@ void bcrates_app_setup() {
     #if defined( ONLY_ESSENTIAL )
         return;
     #endif
-    // Create and register new application
-    //   params: name, icon, auto add "refresh" button (this app will use synchronize function of the SynchronizedApplication class).
-    //   Also, you can configure count of the required pages in the next two params (to have more app screens).
+
     bcratesApp.init("BTC price", &bc_rates_64px, true, 1, 1);
     
     // Build and configure application
@@ -52,7 +54,7 @@ void bcrates_app_setup() {
         }
     });
     
-    // We want to start syncronization every time when WiFi connection is established. So we will listen system events:
+    // We want to start syncronization every time when WiFi connection is established.
     wifictl_register_cb(WIFICTL_CONNECT | WIFICTL_OFF, bcrates_wifictl_event_cb, "bcrates app widget");
 }
 
@@ -77,20 +79,23 @@ void build_main_page()
     big.textFont(&Ubuntu_48px)
       .textOpacity(LV_OPA_80);
 
-    AppPage& screen = bcratesApp.mainPage(); // This is parent for all main screen widgets
+    AppPage& screen = bcratesApp.mainPage();
 
+    // BTC price (top)
     lblCurrency1 = Label(&screen);
-    lblCurrency1.text(mainPair)
+    lblCurrency1.text("---")
         .alignText(LV_LABEL_ALIGN_CENTER)
         .style(big, true)
         .alignInParentCenter(0, -30);
 
+    // XMR price (bottom)
     lblCurrency2 = Label(&screen);
-    lblCurrency2.text(secondPairValue)
+    lblCurrency2.text("---")
         .alignText(LV_LABEL_ALIGN_CENTER)
         .style(big, true)
-        .alignOutsideBottomMid(lblCurrency1);
+        .alignOutsideBottomMid(lblCurrency1, 0, 10);
 
+    // Updated at
     lblUpdatedAt = Label(&screen);
     lblUpdatedAt.text("loading...")
         .alignText(LV_LABEL_ALIGN_LEFT)
@@ -100,15 +105,16 @@ void build_main_page()
 void build_settings()
 {
     // Create full options list and attach items to variables
-    config.addString("apikey", 32).assign(&apiKey);
-    config.addString("pair1", 12, "BTC_USD").assign(&mainPair);
+    // apiKey, pair1, and pair2 are kept only for compatibility with old settings files – they are ignored now
+    config.addString("apikey", 80).assign(&apiKey);   // was 32
+    config.addString("pair1", 12, "BTC").assign(&mainPair);
     config.addString("pair2", 12).assign(&secondPair);
     config.addBoolean("autosync", false);
     config.addBoolean("widget", false);
 
-    // Switch desktop widget state based on the cuurent settings when changed
+    // Switch desktop widget state based on the current settings when changed
     config.onLoadSaveHandler([](JsonConfig& cfg) {
-        bool widgetEnabled = cfg.getBoolean("widget"); // Is app widget enabled?
+        bool widgetEnabled = cfg.getBoolean("widget");
         if (widgetEnabled)
             bcratesApp.icon().registerDesktopWidget("bc", &bc_rates_64px);
         else
@@ -118,27 +124,81 @@ void build_settings()
     bcratesApp.useConfig(config, true); // true - auto create settings page widgets
 }
 
+//HERE
 bool fetch_bc_rates(String apiKey, String pair1, String pair2) {
-    char url[256]=""; float p1=0, p2=0;
-    snprintf(url, sizeof(url), "http://free.currconv.com/api/v7/convert?apiKey=%s&compact=ultra&q=%s,%s", apiKey.c_str(), pair1.c_str(), pair2.c_str());
-    if (pair2.length() == 0) // If single currency used - remove ',' char
-        url[strlen(url)-1]='\0';
+    log_i("===== fetch_bc_rates (BTC + XMR) START =====");
+    log_i("Free heap: %d", ESP.getFreeHeap());
 
-    JsonRequest request(320);
-    if (!request.process(url)) {
-        updatedAt = request.errorString();
+    if (WiFi.status() != WL_CONNECTED) {
+        updatedAt = "No WiFi";
         return false;
     }
 
-    mainPairValue = secondPairValue = "";
-    p1 = request[mainPair].as<float>();
-    mainPairValue = String(p1, 2);
-    if (request.size() > 1) { // Second currency pair available
-        p2 = request[secondPair].as<float>();
-        secondPairValue = String(p2, 2);
+    // Request both BTC and XMR in one call
+    char url[280];
+    if (apiKey.length() == 64) {
+        snprintf(url, sizeof(url),
+                 "https://min-api.cryptocompare.com/data/pricemulti?fsyms=BTC,XMR&tsyms=USD&api_key=%s",
+                 apiKey.c_str());
+    } else {
+        snprintf(url, sizeof(url),
+                 "https://min-api.cryptocompare.com/data/pricemulti?fsyms=BTC,XMR&tsyms=USD");
     }
-    updatedAt = request.formatCompletedAt("Upd: %d.%m %H:%M.%S");
-    //log_i("bc rates: %d = %f, %f", doc.size(), p1, p2);
 
+    log_i("URL: %s", url);
+
+    WiFiClientSecure client;
+    client.setInsecure();
+    client.setTimeout(10);
+
+    HTTPClient https;
+    https.setTimeout(10000);
+    https.setUserAgent("TTGO-Watch/1.0");
+    https.setReuse(false);
+
+    if (!https.begin(client, url)) {
+        updatedAt = "begin() failed";
+        return false;
+    }
+
+    int httpCode = https.GET();
+    log_i("HTTP code: %d", httpCode);
+
+    if (httpCode != HTTP_CODE_OK) {
+        updatedAt = String("HTTP ") + String(httpCode);
+        https.end();
+        return false;
+    }
+
+    String payload = https.getString();
+    https.end();
+
+    log_i("Payload: %s", payload.c_str());
+
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, payload);
+    if (err) {
+        updatedAt = String(err.c_str());
+        return false;
+    }
+
+    // BTC
+    if (doc["BTC"]["USD"].isNull()) {
+        updatedAt = "No BTC price";
+        return false;
+    }
+    float btc = doc["BTC"]["USD"].as<float>();
+    mainPairValue = String(btc, 2);          // Top line
+
+    // XMR
+    if (!doc["XMR"]["USD"].isNull()) {
+        float xmr = doc["XMR"]["USD"].as<float>();
+        secondPairValue = String(xmr, 2);    // Bottom line
+    } else {
+        secondPairValue = "---";
+    }
+
+    updatedAt = "[BTC/XMR prices:]";
+    log_i("BTC: %s   XMR: %s", mainPairValue.c_str(), secondPairValue.c_str());
     return true;
 }
