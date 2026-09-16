@@ -59,6 +59,11 @@ Build and upload:
 pio run -t upload
 ```
 
+Development and debug monitor terminal using:
+```bash
+pio device monitor -f esp32_exception_decoder
+```
+
 Please check out
   https://github.com/Shinoa-Fores/My-TTGO-Watch/blob/709ed0c5863435aa966c1d6f44552ddc0909a57c/src/hardware/wifictl.cpp#L256-L261
 to setup your wifi when wps or input via display is not possible.
