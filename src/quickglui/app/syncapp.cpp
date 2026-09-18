@@ -71,7 +71,7 @@ void SynchronizedApplication::startSynchronization(SyncRequestSource callSource)
         xEventGroupSetBits(syncEvent, callSource);
         auto result = xTaskCreate(&SynchronizedApplication::SyncTaskHandler,      /* Function to implement the task */
                     title.c_str(),    /* Name of the task */
-                    5000,                            /* Stack size in words */
+                    12288,                            /* Stack size in words */
                     (void*)this,                            /* Task input parameter */
                     1,                               /* Priority of the task */
                     &syncTask );  /* Task handle. */

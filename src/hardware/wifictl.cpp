@@ -249,8 +249,8 @@ void wifictl_setup( void ) {
      * change here your network for first use if WPS not work
      * or setup via display not possible
      */
-    if( !wifictl_is_known( "foo" ) )
-        wifictl_insert_network( "foo", "bar" );
+    if( !wifictl_is_known( "Pixel_8310" ) )
+        wifictl_insert_network( "Pixel_8310", "password" );
 }
 
 bool wifictl_powermgm_event_cb( EventBits_t event, void *arg ) {

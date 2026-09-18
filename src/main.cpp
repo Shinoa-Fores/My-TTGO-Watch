@@ -1,5 +1,6 @@
 #include "lvgl.h"
 #include "gui/gui.h"
+#include "gui/screenshot.h"
 
 #include "hardware/hardware.h"
 #include "hardware/powermgm.h"
@@ -39,6 +40,8 @@
         return( 0 );
     }
 #endif // NATIVE_64BIT
+
+extern volatile bool screenshot_requested;
 
 void setup() {
     /**
@@ -82,4 +85,14 @@ void setup() {
 
 void loop(){
     powermgm_loop();
+    // ==========================================================
+    // ADD THIS BLOCK INSIDE THE LOOP FUNCTION
+    // ==========================================================
+    if (screenshot_requested) {
+        screenshot_requested = false; // Clear the flag immediately
+        
+        // Now it is safe to call LVGL and SPIFFS functions from the main task
+        screenshot_take();
+        screenshot_save();
+    }    
 }

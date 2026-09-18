@@ -15,7 +15,7 @@ LV_IMG_DECLARE(bc_rates_64px);
 LV_FONT_DECLARE(Ubuntu_48px);
 
 static SynchronizedApplication bcratesApp;
-static JsonConfig config("bc-rates.json");
+static JsonConfig config("fx-rates.json");
 
 static String apiKey, mainPair, secondPair; // Unused but kept for config file compatibility
 static String mainPairValue, secondPairValue, updatedAt;
@@ -23,6 +23,9 @@ static Label lblCurrency1, lblCurrency2, lblUpdatedAt;
 static Label lblTitle1, lblTitle2;
 
 static Style big;
+
+// Track the last successful update time (in seconds)
+static uint32_t last_update_time = 0;
 
 /*
  * setup routine for application
@@ -48,6 +51,9 @@ void bcrates_app_setup() {
             lblCurrency1.text(mainPairValue).alignInParentCenter(0, -30);
             lblCurrency2.text(secondPairValue).alignOutsideBottomMid(lblCurrency1);
             bcratesApp.icon().showIndicator(ICON_INDICATOR_OK);
+            
+            // Record the time of successful update (resets the 6-hour timer)
+            last_update_time = millis() / 1000;
         } else {
             // In case of fail
             bcratesApp.icon().showIndicator(ICON_INDICATOR_FAIL);
@@ -62,8 +68,16 @@ bool bcrates_wifictl_event_cb(EventBits_t event, void *arg) {
     switch(event) {
         case WIFICTL_CONNECT:
             bcratesApp.icon().hideIndicator();
-            if ( config.getBoolean("autosync", false ) )
-                bcratesApp.startSynchronization(SyncRequestSource::ConnectionEvent);
+            if ( config.getBoolean("autosync", false ) ) {
+                uint32_t current_time = millis() / 1000;
+                // 6 hours = 21600 seconds. 
+                // If it's the first run (last_update_time == 0) or 6 hours have passed, allow sync.
+                if (last_update_time == 0 || (current_time - last_update_time) > 21600) {
+                    bcratesApp.startSynchronization(SyncRequestSource::ConnectionEvent);
+                } else {
+                    log_i("bcrates: Skipping auto-sync, last update was %lu seconds ago", current_time - last_update_time);
+                }
+            }
             break;
 
         case WIFICTL_OFF:
@@ -124,7 +138,6 @@ void build_settings()
     bcratesApp.useConfig(config, true); // true - auto create settings page widgets
 }
 
-//HERE
 bool fetch_bc_rates(String apiKey, String pair1, String pair2) {
     log_i("===== fetch_bc_rates (BTC + XMR) START =====");
     log_i("Free heap: %d", ESP.getFreeHeap());
