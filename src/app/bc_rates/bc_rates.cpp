@@ -9,6 +9,9 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 
+#include <esp_heap_caps.h>
+
+ 
 // App icon must have an size of 64x64 pixel with an alpha channel
 // Use https://lvgl.io/tools/imageconverter to convert your images and set "true color with alpha"
 LV_IMG_DECLARE(bc_rates_64px);
@@ -140,12 +143,30 @@ void build_settings()
 
 bool fetch_bc_rates(String apiKey, String pair1, String pair2) {
     log_i("===== fetch_bc_rates (BTC + XMR) START =====");
-    log_i("Free heap: %d", ESP.getFreeHeap());
+
+    // Better diagnostics – internal RAM is what matters for SSL
+    log_i("Free heap: %u | free internal: %u | largest internal block: %u | free PSRAM: %u",
+          ESP.getFreeHeap(),
+          heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+          heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),
+          ESP.getFreePsram());
 
     if (WiFi.status() != WL_CONNECTED) {
         updatedAt = "No WiFi";
         return false;
     }
+
+    // Give other tasks (weather, etc.) a chance to finish and free internal RAM
+    // 2–4 seconds is usually enough on the T-Watch
+    vTaskDelay(pdMS_TO_TICKS(5000));
+
+    // Prefer PSRAM for larger allocations (may free a bit of internal DRAM)
+    heap_caps_malloc_extmem_enable(4 * 1024);
+
+    // Log again after the delay so you can see if free internal improved
+    log_i("After delay – free internal: %u | largest internal block: %u",
+          heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+          heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
 
     // Request both BTC and XMR in one call
     char url[280];

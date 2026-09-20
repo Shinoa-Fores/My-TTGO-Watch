@@ -23,8 +23,10 @@
 
 #include "powermgm.h"
 #include "sound.h"
+#include "blectl.h"
 #include "timesync.h"
 #include "callback.h"
+#include "utils/alloc.h"
 #include "hardware/config/soundconfig.h"
 
 #ifdef NATIVE_64BIT
@@ -40,24 +42,70 @@
 
         #include "AudioFileSourceSPIFFS.h"
         #include "AudioFileSourcePROGMEM.h"
+        #include "AudioFileSourceFunction.h"
         #include "AudioFileSourceID3.h"
         #include "AudioGeneratorMP3.h"
         #include "AudioGeneratorWAV.h"
-        #include <AudioGeneratorMIDI.h>
+        #include "AudioGeneratorMIDI.h"
+
         #include "AudioOutputI2S.h"
-        #include <ESP8266SAM.h>
+        #include "BluetoothA2DPSink.h"
+        #include "BluetoothA2DPSource.h"
+
+        #define c3_frequency  130.81
 
         AudioFileSourceSPIFFS *spliffs_file;
         AudioOutputI2S *out;
         AudioFileSourceID3 *id3;
 
+        BluetoothA2DPSink a2dp_sink;
+        BluetoothA2DPSource a2dp_source;
+
+	// midi soundfont
+	AudioFileSourceSPIFFS *midi_sf2;
+
+        AudioFileSourceFunction* funsource;
+        AudioFileSourceFunction* mf_funsource;
+        AudioFileSourceFunction* dt_funsource;
+
         AudioGeneratorMP3 *mp3;
         AudioGeneratorWAV *wav;
-        ESP8266SAM *sam;
+	AudioGeneratorMIDI *midi;
+
         AudioFileSourcePROGMEM *progmem_file;
     #elif defined( LILYGO_WATCH_2020_V2 )
+        #include "TTGO.h"
+
+        #include "AudioFileSourceSPIFFS.h"
+        #include "AudioFileSourcePROGMEM.h"
+        #include "AudioFileSourceFunction.h"
+        #include "AudioFileSourceID3.h"
+        #include "AudioGeneratorMP3.h"
+        #include "AudioGeneratorWAV.h"
+        #include "AudioGeneratorMIDI.h"
+
+        #include "BluetoothA2DPSource.h"
+
+        #define c3_frequency  130.81
+
+        AudioFileSourceSPIFFS *spliffs_file;
+        AudioFileSourceID3 *id3;
+
+        BluetoothA2DPSource a2dp_source;
+
+	// midi soundfont
+	AudioFileSourceSPIFFS *midi_sf2;
+
+        AudioFileSourceFunction* funsource;
+        AudioFileSourceFunction* mf_funsource;
+        AudioFileSourceFunction* dt_funsource;
+
+        AudioGeneratorMP3 *mp3;
+        AudioGeneratorWAV *wav;
+	AudioGeneratorMIDI *midi;
+
+        AudioFileSourcePROGMEM *progmem_file;
     #elif defined( LILYGO_WATCH_2021 )    
-    #elif defined( WT32_SC01 )
     #else
         #warning "no hardware driver for sound"
     #endif
@@ -65,6 +113,10 @@
 
 bool sound_init = false;
 bool is_speaking = false;
+bool is_bt = false; 
+
+char *mf_insound; 
+char *dt_insound; 
 
 sound_config_t sound_config;
 
@@ -96,29 +148,31 @@ void sound_setup( void ) {
             #if defined( LILYGO_WATCH_2020_V1 )
                     TTGOClass *ttgo = TTGOClass::getWatch();
                     ttgo->power->setLDO3Mode( AXP202_LDO3_MODE_DCIN );
-                    ttgo->power->setLDO3Voltage( 3300 );
+                    ttgo->power->setLDO3Voltage( 2900 );
             #endif
             /**
              * set sound driver
              */
-            out = new AudioOutputI2S();
+            out  = new AudioOutputI2S();
             out->SetPinout( TWATCH_DAC_IIS_BCK, TWATCH_DAC_IIS_WS, TWATCH_DAC_IIS_DOUT );
-            sound_set_volume_config( sound_config.volume );
-            mp3 = new AudioGeneratorMP3();
-            wav = new AudioGeneratorWAV();
-            sam = new ESP8266SAM;
-            sam->SetVoice(sam->VOICE_SAM);
+
+            mp3  = new AudioGeneratorMP3();
+            wav  = new AudioGeneratorWAV();
+            midi = new AudioGeneratorMIDI();
+
             /*
             * register all powermgm callback functions
             */
             powermgm_register_cb( POWERMGM_SILENCE_WAKEUP | POWERMGM_STANDBY | POWERMGM_WAKEUP, sound_powermgm_event_cb, "powermgm sound" );
             powermgm_register_loop_cb( POWERMGM_STANDBY | POWERMGM_SILENCE_WAKEUP | POWERMGM_WAKEUP, sound_powermgm_loop_cb, "powermgm sound loop" );
+
             sound_set_enabled( sound_config.enable );
+            sound_init = true;
+            sound_set_volume_config( sound_config.volume );
 
             sound_send_event_cb( SOUNDCTL_ENABLED, (void *)&sound_config.enable );
             sound_send_event_cb( SOUNDCTL_VOLUME, (void *)&sound_config.volume );
 
-            sound_init = true;
         #else
             sound_set_enabled( false );
             sound_init = false;
@@ -148,14 +202,16 @@ bool sound_powermgm_event_cb( EventBits_t event, void *arg ) {
     }
 
     switch( event ) {
-        case POWERMGM_STANDBY:          sound_set_enabled( false );
-                                        log_d("go standby");
+        case POWERMGM_STANDBY:          if(is_bt) 
+                                        {
+                                            log_i("Stopping standby as A2DP active");
+                                            return false; 
+                                        }
+                                        sound_set_enabled( false );
                                         break;
         case POWERMGM_WAKEUP:           sound_set_enabled( sound_config.enable );
-                                        log_d("go wakeup");
                                         break;
         case POWERMGM_SILENCE_WAKEUP:   sound_set_enabled( sound_config.enable );
-                                        log_d("go wakeup");
                                         break;
     }
     return( true );
@@ -175,12 +231,13 @@ bool sound_powermgm_loop_cb( EventBits_t event, void *arg ) {
         if ( sound_config.enable && sound_init ) {
             // we call sound_set_enabled(false) to ensure the PMU stops all power
             if ( mp3->isRunning() && !mp3->loop() ) {
-                log_d("stop playing mp3 sound");
                 mp3->stop();
             }
             if ( wav->isRunning() && !wav->loop() ) {
-                log_d("stop playing wav sound");
                 wav->stop(); 
+            }
+            if ( midi->isRunning() && !midi->loop() ) {
+                midi->stop(); 
             }
         }
     #endif
@@ -257,6 +314,7 @@ void sound_set_enabled( bool enabled ) {
             if ( sound_init ) {
                 if ( mp3->isRunning() ) mp3->stop();
                 if ( wav->isRunning() ) wav->stop();
+                if ( midi->isRunning() ) midi->stop();
             }
             /**
              * ttgo->disableAudio() is not working
@@ -273,7 +331,354 @@ void sound_set_enabled( bool enabled ) {
 #endif
 }
 
-void sound_play_spiffs_mp3( const char *filename ) {
+void sound_a2dp_sink(void) 
+{
+#if defined( LILYGO_WATCH_2020_V1 ) || defined( LILYGO_WATCH_2020_V3 )
+    if( sound_config.enable && sound_init && !sound_is_silenced() && blectl_get_autoon() ) 
+    {
+        is_bt = true;
+        i2s_pin_config_t my_pin_config = {
+          .bck_io_num = TWATCH_DAC_IIS_BCK,
+          .ws_io_num = TWATCH_DAC_IIS_WS,
+          .data_out_num = TWATCH_DAC_IIS_DOUT,
+          .data_in_num = I2S_PIN_NO_CHANGE
+        };
+        a2dp_sink.set_pin_config(my_pin_config);
+        a2dp_sink.start("eMusic");
+    }
+    else
+    {
+        log_i("Cannot enable A2DP sink per settings");
+    }
+#endif
+}
+
+float tone1, tone2; 
+
+float sound_generate_sine_tone(const float time)
+{
+    float v = sin(TWO_PI * tone1 * time);
+    v *= fmod(time, 1.f);
+    v *= 0.5; 
+    return v;
+}
+
+float sound_generate_dual_tone(const float time)
+{
+    float v = sin(TWO_PI * tone1 * time) + sin(TWO_PI * tone2 * time);
+    v *= fmod(time, 1.f);
+    v *= 0.5; 
+    return v;
+}
+
+int sound_generate_sine( const float freq ) 
+{
+    /**
+     * check if sound available
+     */
+    if( !sound_get_available() ) {
+        return -1;
+    }
+#ifdef NATIVE_64BIT
+
+#else
+    #if defined( LILYGO_WATCH_2020_V1 ) || defined( LILYGO_WATCH_2020_V3 )
+        if(wav->isRunning())
+        {
+            return 1; 
+        }   
+
+        if ( sound_config.enable && sound_init && !sound_is_silenced() && !wav->isRunning() ) {
+            sound_set_enabled( sound_config.enable );
+            tone1 = freq;
+            funsource = new AudioFileSourceFunction(.5);
+            funsource->addAudioGenerators(sound_generate_sine_tone);
+            wav->begin(funsource, out);
+            return 0; 
+        } else {
+            log_i("Cannot generate sine tone, sound is disabled");
+            return -1; 
+        }
+    #endif
+#endif
+}
+
+void sound_generate_mf_string(char *str) 
+{
+    int x, len;
+
+    /**
+     * check if sound available
+     */
+    if( !sound_get_available() ) {
+        return;
+    }
+#ifdef NATIVE_64BIT
+
+#else
+    #if defined( LILYGO_WATCH_2020_V1 ) || defined( LILYGO_WATCH_2020_V3 )
+        if(wav->isRunning()) 
+        {
+            return;  
+        }
+
+        if ( sound_config.enable && sound_init && !sound_is_silenced() && !wav->isRunning() ) 
+        {
+            len = strlen(str);
+            if(len <= 0)
+            {
+                return; 
+            }
+            sound_set_enabled( sound_config.enable );
+
+	    for (x = 0; x< len; x++)
+	    {
+		switch(str[x]) 
+                {
+		    case '1':
+                        tone1 = 700.f; 
+                        tone2 = 900.f; 
+			break;
+		    case '2':
+                        tone1 = 700.f;
+                        tone2 = 1100.f;  
+			break;
+		    case '3':
+                        tone1 = 900.f; 
+                        tone2 = 1100.f;  
+			break;
+		    case '4':
+                        tone1 = 700.f; 
+                        tone2 = 1300.f; 
+			break;
+		    case '5':
+                        tone1 = 900.f; 
+                        tone2 = 1300.f; 
+			break;
+		    case '6':
+                        tone1 = 1100.f; 
+                        tone2 = 1300.f; 
+			break;
+		    case '7':
+                        tone1 = 700.f; 
+                        tone2 = 1500.f; 
+			break;
+		    case '8':
+                        tone1 = 900.f; 
+                        tone2 = 1500.f; 
+			break;
+		    case '9':
+                        tone1 = 1100.f; 
+                        tone2 = 1500.f; 
+			break;
+		    case '0':
+                        tone1 = 1300.f;  
+                        tone2 = 1500.f; 
+			break;
+		    // KP
+		    case '\\':
+                        tone1 = 1500.f; 
+                        tone2 = 1700.f; 
+			break;
+		    // ST
+		    case '/':
+                        tone1 = 1100.f; 
+                        tone2 = 1700.f; 
+			break;
+		    // " 2600 "
+		    case '^':
+                        tone1 = 2600.f; 
+                        tone2 = 0.f; 
+			break;
+		}
+                mf_funsource = new AudioFileSourceFunction(.4);
+                mf_funsource->addAudioGenerators(sound_generate_dual_tone);
+                wav->begin(mf_funsource, out);
+                delay(500);
+                 if ( wav->isRunning()) {
+	             wav->stop();
+                 }
+            }
+          return; 
+        } else {
+            log_i("Cannot generate DTMF, sound is disabled");
+            return; 
+        }
+    #endif
+#endif
+}
+
+void sound_generate_dtmf_string(char *str) 
+{
+    int x, len;
+
+    /**
+     * check if sound available
+     */
+    if( !sound_get_available() ) {
+        return;
+    }
+#ifdef NATIVE_64BIT
+
+#else
+    #if defined( LILYGO_WATCH_2020_V1 ) || defined( LILYGO_WATCH_2020_V3 )
+        if(wav->isRunning()) 
+        {
+            return;  
+        }
+
+        if ( sound_config.enable && sound_init && !sound_is_silenced() && !wav->isRunning() ) 
+        {
+            len = strlen(str);
+            if(len <= 0)
+            {
+                return; 
+            }
+            sound_set_enabled( sound_config.enable );
+
+	    for (x = 0; x< len; x++)
+	    {
+		switch(str[x]) 
+                {
+		    case '1':
+                        tone1 = 697.f; 
+                        tone2 = 1209.f; 
+			break;
+		    case '2':
+                        tone1 = 697.f; 
+                        tone2 = 1336.f; 
+			break;
+		    case '3':
+                        tone1 = 697.f; 
+                        tone2 = 1477.f; 
+			break;
+		    case '4':
+                        tone1 = 770.f; 
+                        tone2 = 1209.f; 
+			break;
+		    case '5':
+                        tone1 = 770.f; 
+                        tone2 = 1336.f; 
+			break;
+		    case '6':
+                        tone1 = 770.f; 
+                        tone2 = 1477.f; 
+			break;
+		    case '7':
+                        tone1 = 852.f; 
+                        tone2 = 1209.f; 
+			break;
+		    case '8':
+                        tone1 = 852.f; 
+                        tone2 = 1336.f; 
+			break;
+		    case '9':
+                        tone1 = 852.f; 
+                        tone2 = 1477.f; 
+			break;
+		    case '0':
+                        tone1 = 941.f; 
+                        tone2 = 1336.f; 
+			break;
+                    case 'A': 
+                        tone1 = 697.f; 
+                        tone2 = 1633.f; 
+                        break;
+                    case 'B':
+                        tone1 = 770.f; 
+                        tone2 = 1633.f; 
+                        break;
+                    case 'C':
+                        tone1 = 852.f;
+                        tone2 = 1633.f;
+                        break;
+                    case 'D': 
+                        tone1 = 941.f; 
+                        tone2 = 1633.f; 
+                        break;
+                    case '*':
+                        tone1 = 941.f; 
+                        tone2 = 1209.f; 
+                        break;
+                    case '#':
+                        tone1 = 941.f; 
+                        tone2 = 1477.f; 
+                        break;
+		}
+                dt_funsource = new AudioFileSourceFunction(.4);
+                dt_funsource->addAudioGenerators(sound_generate_dual_tone);
+                wav->begin(dt_funsource, out);
+                delay(500);
+                 if ( wav->isRunning()) {
+	             wav->stop();
+                 }
+            }
+          return; 
+        } else {
+            log_i("Cannot generate DTMF, sound is disabled");
+            return; 
+        }
+    #endif
+#endif
+}
+
+void mf_app_task(void * pvParameters)
+{
+    mf_insound = (char *)pvParameters; 
+
+    sound_generate_mf_string(mf_insound);
+    vTaskDelay(100);
+    free(mf_insound); 
+    mf_insound = NULL; 
+    vTaskDelete(NULL);
+}
+
+void dtmf_app_task(void * pvParameters)
+{
+    dt_insound = (char *)pvParameters; 
+
+    sound_generate_dtmf_string(dt_insound);
+    vTaskDelay(100);
+    free(dt_insound); 
+    dt_insound = NULL; 
+    vTaskDelete(NULL);
+}
+
+// The supported audio codec in ESP32 A2DP is SBC. SBC audio stream is encoded
+// from PCM data normally formatted as 44.1kHz sampling rate, two-channel 16-bit sample data
+int32_t get_data_channels(Frame *frame, int32_t channel_len) {
+    static double m_time = 0.0;
+    double m_amplitude = 10000.0;  // -32,768 to 32,767
+    double m_deltaTime = 1.0 / 44100.0;
+    double m_phase = 0.0;
+    double double_Pi = PI * 2.0;
+    // fill the channel data
+    for (int sample = 0; sample < channel_len; ++sample) {
+        double angle = double_Pi * c3_frequency * m_time + m_phase;
+        frame[sample].channel1 = m_amplitude * sin(angle);
+        frame[sample].channel2 = frame[sample].channel1;
+        m_time += m_deltaTime;
+    }
+
+    return channel_len;
+}
+
+void sound_a2dp_source(void) 
+{
+    if( sound_config.enable && sound_init && !sound_is_silenced() && blectl_get_autoon() ) 
+    {
+        is_bt = true;
+        a2dp_source.start("HyperGear BT100", get_data_channels);  
+        a2dp_source.set_volume(30);
+    }
+    else
+    {
+        log_i("Cannot enable A2DP source per settings");
+    }
+}
+
+// Results are awful - why? 
+void sound_play_spiffs_midi( const char *filename, const char *soundfont ) {
     /**
      * check if sound available
      */
@@ -286,12 +691,39 @@ void sound_play_spiffs_mp3( const char *filename ) {
     #if defined( LILYGO_WATCH_2020_V1 ) || defined( LILYGO_WATCH_2020_V3 )
         if ( sound_config.enable && sound_init && !sound_is_silenced() ) {
             sound_set_enabled( sound_config.enable );
-            log_d("playing file %s from SPIFFS", filename);
+            log_i("playing MIDI %s from SPIFFS with sf2 %s", filename, soundfont);
+            spliffs_file = new AudioFileSourceSPIFFS(filename);
+            midi_sf2 = new AudioFileSourceSPIFFS(soundfont);
+
+            midi = new AudioGeneratorMIDI();
+            midi->SetSoundfont(midi_sf2);
+            midi->begin(spliffs_file, out);
+        } else {
+            log_i("Cannot play MIDI, sound is disabled");
+        }
+    #endif
+#endif
+}
+
+void sound_play_spiffs_mp3( const char *filename ) {
+    /**
+     * check if sound available
+     */
+    if( !sound_get_available() ) {
+        return;
+    }
+#ifdef NATIVE_64BIT
+
+#else
+    #if defined( LILYGO_WATCH_2020_V1 ) || defined( LILYGO_WATCH_2020_V3 )
+        if ( sound_config.enable && sound_init && !sound_is_silenced() && !mp3->isRunning() ) {
+            sound_set_enabled( sound_config.enable );
+            log_i("playing file %s from SPIFFS", filename);
             spliffs_file = new AudioFileSourceSPIFFS(filename);
             id3 = new AudioFileSourceID3(spliffs_file);
             mp3->begin(id3, out);
         } else {
-            log_d("Cannot play mp3, sound is disabled");
+            log_i("Cannot play mp3, sound is disabled");
         }
     #endif
 #endif
@@ -308,41 +740,20 @@ void sound_play_progmem_wav( const void *data, uint32_t len ) {
 
 #else
     #if defined( LILYGO_WATCH_2020_V1 ) || defined( LILYGO_WATCH_2020_V3 )
-        if ( sound_config.enable && sound_init && !sound_is_silenced() ) {
+        if ( sound_config.enable && sound_init && !sound_is_silenced() && !wav->isRunning() ) {
             sound_set_enabled( sound_config.enable );
-            log_d("playing audio (size %d) from PROGMEM ", len );
+            log_i("playing audio (size %d) from PROGMEM ", len );
             progmem_file = new AudioFileSourcePROGMEM( data, len );
             wav->begin(progmem_file, out);
         } else {
-            log_d("Cannot play wav, sound is disabled");
+            log_i("Cannot play wav, sound is disabled");
         }
     #endif
 #endif
 }
 
 void sound_speak( const char *str ) {
-    /**
-     * check if sound available
-     */
-    if( !sound_get_available() ) {
         return;
-    }
-#ifdef NATIVE_64BIT
-
-#else
-    #if defined( LILYGO_WATCH_2020_V1 ) || defined( LILYGO_WATCH_2020_V3 )
-        if ( sound_config.enable && sound_init && !sound_is_silenced() ) {
-            sound_set_enabled( sound_config.enable );
-            log_d("Speaking text", str);
-            is_speaking = true;
-            sam->Say(out, str);
-            is_speaking = false;
-        }
-        else {
-            log_d("Cannot speak, sound is disabled");
-        }
-    #endif
-#endif
 }
 
 void sound_save_config( void ) {
@@ -422,9 +833,8 @@ void sound_set_volume_config( uint8_t volume ) {
 #else
     #if defined( LILYGO_WATCH_2020_V1 ) || defined( LILYGO_WATCH_2020_V3 )
         if ( sound_config.enable && sound_init ) {
-            log_d("Setting sound volume to: %d", volume);
-            // limiting max gain to 3.5 (max gain is 4.0)
-            out->SetGain(3.5f * ( sound_config.volume / 100.0f ));
+            // limiting max gain here (max poss gain is 4.0)
+            out->SetGain(0.5f * ( sound_config.volume / 100.0f ));
         }
     #endif
 #endif
@@ -434,7 +844,7 @@ void sound_set_volume_config( uint8_t volume ) {
 
 bool sound_is_silenced( void ) {
     if ( !sound_config.silence_timeframe ) {
-        log_d("no silence sound timeframe");
+        //log_i("no silence sound timeframe");
         return( false );
     }
 

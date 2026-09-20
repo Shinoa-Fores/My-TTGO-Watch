@@ -28,7 +28,8 @@
     
     #define SOUNDCTL_ENABLED           _BV(0)         /** @brief event mask for sound enabled/disable, callback arg is (bool*) */
     #define SOUNDCTL_VOLUME            _BV(1)         /** @brief event mask for sound volume change, callback arg is (uint8_t*)  */
-
+    void dtmf_app_task(void * pvParameters);
+    void mf_app_task(void * pvParameters);
     /**
      * @brief play mp3 file from SPIFFS by path/filename
      * 
