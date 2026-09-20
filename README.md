@@ -2,7 +2,7 @@
 
 # My-TTGO-Watch
 
-A GUI named hedge for smartwatch like devices based on ESP32. Currently support for T-Watch2020 (V1,V2,V3), T-Watch2021. This fork has a BASIC interpreter as found in FantasyFactory's fork of this repo.
+A GUI named hedge for smartwatch like devices based on ESP32. Currently support for T-Watch2020 (V1,V2,V3), T-Watch2021. This fork has a BASIC interpreter as found in FantasyFactory's fork of this repo. This branch contains the tools from <a href="https://github.com/linuxthor/Hackers-TTGO-Watch/tree/master">linuxthor's fork</a>.
 
 ## Features
 
