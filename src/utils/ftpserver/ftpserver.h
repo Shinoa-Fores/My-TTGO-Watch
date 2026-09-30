@@ -19,16 +19,27 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-
 #ifndef _FTPSERVER_H
     #define _FTPSERVER_H
 
-    #define FTPSERVER_USER      "TTWatch"
-    #define FTPSERVER_PASSWORD  "password"
+    #include <stdint.h>
+
+    #define FTPSERVER_USER      "ftp"
+    #define FTPSERVER_PASSWORD  "ftp"
 
     /**
-     *  @brief setup builtin ftpserver, call after first wifi-connection. otherwise esp32 will crash
+     * @brief start the ftp server with the given credentials
+     * 
+     * @param user  ftp username (ignored; always ftp/ftp)
+     * @param pass  ftp password (ignored; always ftp/ftp)
      */
     void ftpserver_start( const char *user, const char *pass );
+
+    /**
+     * @brief must be called frequently from the main loop to service
+     *        the ftp control and data connections. without this, the
+     *        client will time out and the server may crash.
+     */
+    void ftpserver_handle( void );
 
 #endif // _FTPSERVER_H

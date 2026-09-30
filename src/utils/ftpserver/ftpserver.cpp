@@ -20,37 +20,38 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 #include "hardware/powermgm.h"
+#include "utils/ftpserver/ftpserver.h"
 
 #ifdef NATIVE_64BIT
 #else
     #include <Arduino.h>
-    #include <ESP8266FtpServer.h>
+    #include <SPIFFS.h>
+    #include <FTPServer.h>
 
-    //set #define FTP_DEBUG in ESP8266FtpServer.h to see ftp verbose on serial
-    FtpServer *ftpSrv = NULL;   
+    FTPServer *ftpSrv = NULL;
 #endif
 
-bool ftpserver_powermgm_event_loop_cb( EventBits_t event, void *arg );
-
 void ftpserver_start( const char *user, const char *pass ) {
-    /**
-     * check if ftp server running
-     */
 #ifdef NATIVE_64BIT
 
 #else
+    (void)user;
+    (void)pass;
+
     if ( !ftpSrv ) {
-        /**
-         * get a new instance
-         */
-        ftpSrv = new FtpServer;
-        /**
-         * start ftp server
-         */
+        if ( !SPIFFS.begin( false ) ) {
+            log_e("SPIFFS mount failed, FTP server not started");
+            return;
+        }
+
+        ftpSrv = new FTPServer( SPIFFS );
         if ( ftpSrv ) {
-            ftpSrv->begin( user, pass );
-            log_i("use ftp user/password: %s/%s", user, pass );
-            powermgm_register_loop_cb( POWERMGM_WAKEUP | POWERMGM_SILENCE_WAKEUP, ftpserver_powermgm_event_loop_cb, "handle ftp" );
+            /*
+             * Always use ftp/ftp. Saved wificfg.json may still contain the
+             * legacy TTWatch/password pair from older firmware.
+             */
+            ftpSrv->begin( FTPSERVER_USER, FTPSERVER_PASSWORD );
+            log_i("FTP server started, user/password: %s/%s", FTPSERVER_USER, FTPSERVER_PASSWORD );
         }
         else {
             log_e("start ftp server failed");
@@ -59,22 +60,12 @@ void ftpserver_start( const char *user, const char *pass ) {
 #endif
 }
 
-bool ftpserver_powermgm_event_loop_cb( EventBits_t event, void *arg ) {
+void ftpserver_handle( void ) {
 #ifdef NATIVE_64BIT
 
 #else
-    switch( event ) {
-        case POWERMGM_SILENCE_WAKEUP:
-            if ( ftpSrv ) {
-                ftpSrv->handleFTP();
-            }
-            break;
-        case POWERMGM_WAKEUP:
-            if ( ftpSrv ) {
-                ftpSrv->handleFTP();
-            }
-            break;
+    if ( ftpSrv ) {
+        ftpSrv->handleFTP();
     }
 #endif
-    return( true );
 }

@@ -30,6 +30,7 @@
     #include "utils/ftpserver/ftpserver.h"
     #define NETWORKLIST_ENTRYS          20
     #define WIFICTL_JSON_CONFIG_FILE    "/wificfg.json"
+    /* FTPSERVER_USER / FTPSERVER_PASSWORD come from utils/ftpserver/ftpserver.h */
 
     /**
      * @brief network list structure

@@ -89,19 +89,14 @@ bool wifictl_config_t::onLoad(JsonDocument& doc) {
     webserver = doc["webserver"] | false;
     ftpserver = doc["ftpserver"] | false;
 
-    if ( doc.containsKey("ftpuser") ) {
-        strncpy( ftpuser, doc["ftpuser"], sizeof( ftpuser ) );
-    }
-    else {
-        strncpy( ftpuser, FTPSERVER_USER, sizeof( ftpuser ) );
-    }
-
-    if ( doc.containsKey("ftppass") ) {
-        strncpy( ftppass, doc["ftppass"], sizeof( ftppass ) );
-    }
-    else {
-        strncpy( ftppass, FTPSERVER_PASSWORD, sizeof( ftppass ) );
-    }
+    /*
+     * Always use the built-in ftp/ftp credentials. Older builds persisted
+     * TTWatch/password in wificfg.json and that kept overriding the defaults.
+     */
+    strncpy( ftpuser, FTPSERVER_USER, sizeof( ftpuser ) );
+    ftpuser[ sizeof( ftpuser ) - 1 ] = '\0';
+    strncpy( ftppass, FTPSERVER_PASSWORD, sizeof( ftppass ) );
+    ftppass[ sizeof( ftppass ) - 1 ] = '\0';
 
     for ( int i = 0 ; i < NETWORKLIST_ENTRYS ; i++ ) {
         if ( doc["networklist"][ i ].containsKey("ssid") && doc["networklist"][ i ].containsKey("psk") ) {

@@ -38,7 +38,7 @@
     /**
      * define all theme download and compressed theme file
      */
-    #define WATCHFACE_THEME_URL                     "https://raw.githubusercontent.com/sharandac/My-TTGO-Watchfaces/main"
+    #define WATCHFACE_THEME_URL                     "http://raw.githubusercontent.com/Shinoa-Fores/My-TTGO-Watchfaces/main"
     #define WATCHFACE_THEME_LIST_FILE               "/watchface_theme_list.json"
     #define WATCHFACE_THEME_FILE                    "/watchface.tar.gz"
     #define WATCHFACE_THEME_PREV                    "/watchface_theme_prev_120px.png"
