@@ -4,14 +4,12 @@
 
 #include "hardware/hardware.h"
 #include "hardware/powermgm.h"
+#include "utils/ftpserver/ftpserver.h"
+#include "gui/mainbar/setup_tile/bluetooth_settings/bluetooth_message.h"
 
 #include "app/calc/calc_app.h"
 #include "app/FindPhone/FindPhone.h"
-#include "app/gps_status/gps_status.h"
 #include "app/kodi_remote/kodi_remote_app.h"
-#include "app/osmand/osmand_app.h"
-#include "app/powermeter/powermeter_app.h"
-#include "app/osmmap/osmmap_app.h"
 #include "app/mail/mail_app.h"
 #include "app/sshclient/sshclient_app.h"
 #include "app/stopwatch/stopwatch_app.h"
@@ -24,8 +22,6 @@
 #include "app/bc_rates/bc_rates.h"
 #include "app/IRController/IRController.h"
 #include "app/alarm_clock/alarm_clock.h"
-#include "app/compass/compass_app.h"
-#include "app/my_basic/my_basic_app.h"
 
 #if defined( NATIVE_64BIT )
     /**
@@ -41,23 +37,22 @@
     }
 #endif // NATIVE_64BIT
 
-extern volatile bool screenshot_requested;
 
-void setup() {
+void setup() {  
     /**
      * hardware setup
      */
     hardware_setup();
+    Serial.println("hardware_post_setup() done");
     /**
      * gui setup
      */
     gui_setup();
+    Serial.println("gui_setup() done");
     /**
      * apps here
      */
-    osmmap_app_setup();
     weather_app_setup();
-    compass_app_setup();
     stopwatch_app_setup();
     tracker_app_setup();
     alarm_clock_setup();
@@ -65,34 +60,38 @@ void setup() {
     calendar_app_setup();
     astro_app_setup();
     mail_app_setup();
-    gps_status_setup();
     IRController_setup();
-    osmand_app_setup();
     bcrates_app_setup();
-    powermeter_app_setup();
     FindPhone_setup();
     wifimon_app_setup();
     calc_app_setup();
     kodi_remote_app_setup();
     sshclient_app_setup();
-    my_basic_app_setup();
+    Serial.println("apps setup done");
     
     /**
      * post hardware setup
      */
     hardware_post_setup();
+    Serial.println("hardware_post_setup() done");
+       
+    // ========== WELCOME NOTIFICATION ON THE WATCH ==========
+    bluetooth_message_queue_msg(
+        "{\"t\":\"notify\","
+        "\"id\":1,"
+        "\"src\":\"[System]\","
+        "\"title\":\"Welcome User!\","
+        "\"body\":\"GM, enjoy your day! :)\"}"
+    );
 }
 
 void loop(){
     powermgm_loop();
-    // ==========================================================
-    // ADD THIS BLOCK INSIDE THE LOOP FUNCTION
-    // ==========================================================
+    ftpserver_handle();
+
     if (screenshot_requested) {
-        screenshot_requested = false; // Clear the flag immediately
-        
-        // Now it is safe to call LVGL and SPIFFS functions from the main task
-        screenshot_take();
-        screenshot_save();
+        screenshot_requested = false;
+
+        screenshot_process_request();
     }    
 }
