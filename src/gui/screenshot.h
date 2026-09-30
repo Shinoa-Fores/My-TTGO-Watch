@@ -23,8 +23,12 @@
     #define _SCREENSHOT_H
 
     #include "config.h"
+    
+    extern volatile bool screenshot_requested;
+    
+    void screenshot_process_request( void );
 
-    #define SCREENSHOT_FILE_NAME    "/spiffs/screen.png"
+    #define SCREENSHOT_FILE_NAME    "/spiffs/screen.bmp"
     /**
      * @brief rgba pixel structure
      */
@@ -63,5 +67,5 @@
      * @brief store a screenshoot from psram to spiffs
      */
     void screenshot_save( void );
-
+    
 #endif // _SCREENSHOT_H
