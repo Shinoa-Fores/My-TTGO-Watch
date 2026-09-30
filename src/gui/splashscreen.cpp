@@ -47,7 +47,7 @@ lv_obj_t *preload = NULL;
 lv_obj_t *preload_label = NULL;
 lv_style_t style;
 
-LV_IMG_DECLARE(hedgehog);
+LV_IMG_DECLARE(bushcat);
 
 void splash_screen_stage_one( void ) {
 
@@ -73,15 +73,15 @@ void splash_screen_stage_one( void ) {
     }
     else {
         log_i("use default boot logo");
-        lv_img_set_src( logo, &hedgehog );
+        lv_img_set_src( logo, &bushcat );
     }
-    lv_obj_align( logo, NULL, LV_ALIGN_CENTER, 0, 0 );
+    lv_obj_align( logo, NULL, LV_ALIGN_CENTER, 0, -15 );
     lv_obj_add_style( logo, LV_OBJ_PART_MAIN, SYSTEM_ICON_STYLE );
 
     preload = lv_bar_create( lv_scr_act(), NULL );
     lv_obj_set_size( preload, lv_disp_get_hor_res( NULL ) - 80, 20 );
     lv_obj_add_style( preload, LV_OBJ_PART_MAIN, SYSTEM_ICON_STYLE );
-    lv_obj_align( preload, logo, LV_ALIGN_OUT_BOTTOM_MID, 0, 30 );
+    lv_obj_align( preload, logo, LV_ALIGN_OUT_BOTTOM_MID, 0, -35 );
     lv_bar_set_anim_time( preload, 2000);
     lv_bar_set_value( preload, 0, LV_ANIM_ON);
     lv_obj_set_hidden( preload, true );
@@ -89,7 +89,7 @@ void splash_screen_stage_one( void ) {
     preload_label = lv_label_create( lv_scr_act(), NULL );
     lv_label_set_text( preload_label, "booting" );
     lv_obj_add_style( preload_label, LV_OBJ_PART_MAIN, SYSTEM_ICON_LABEL_STYLE );
-    lv_obj_align( preload_label, preload, LV_ALIGN_OUT_BOTTOM_MID, 0, 5 );
+    lv_obj_align( preload_label, preload, LV_ALIGN_OUT_BOTTOM_MID, 0, -10 );
 
     lv_disp_trig_activity( NULL );
 
@@ -117,13 +117,14 @@ void splash_screen_stage_one( void ) {
 }
 
 void splash_screen_stage_update( const char* msg, int value ) {
-    lv_obj_move_foreground( preload );
+    //lv_obj_move_foreground( preload );
+    //lv_obj_set_hidden( preload, false );
     lv_disp_trig_activity( NULL );
     lv_task_handler();
     delay(100);
     lv_bar_set_value( preload, 0, LV_ANIM_ON );
     lv_label_set_text( preload_label, msg );
-    lv_obj_align( preload_label, preload, LV_ALIGN_OUT_BOTTOM_MID, 0, 5 );
+    lv_obj_align( preload_label, preload, LV_ALIGN_OUT_BOTTOM_MID, 0, -8 );
     lv_task_handler();
     delay(500);
 }
