@@ -2,7 +2,7 @@
 
 # My-TTGO-Watch
 
-A GUI named hedge for smartwatch like devices based on ESP32. Currently support for T-Watch2020 (V1,V2,V3), T-Watch2021. This fork has a BASIC interpreter as found in FantasyFactory's fork of this repo.
+A GUI named bushcat for smartwatch like devices based on ESP32. Currently support for T-Watch2020 (V3) ONLY!
 
 ## Features
 
@@ -15,20 +15,18 @@ A GUI named hedge for smartwatch like devices based on ESP32. Currently support 
 
   * WiFi
   * Bluetooth
-  * GPS
+  * IR
   * Luminosity
   * Sound volume
 
 * Multiple watch faces:
 
   * Embedded (digital)
-  * [Community based watchfaces](https://sharandac.github.io/My-TTGO-Watchfaces/)
+  * [My collection of various watchfaces.](https://github.com/Shinoa-Fores/My-TTGO-Watchfaces/)
 
 * Multiple 'apps':
 
   * Music (control the playback of the music on your phone)
-  * Navigation (displays navigation instructions coming from the companion app)
-  * Map (displays a map)
   * Notification (displays the last notification received)
   * Stopwatch (with all the necessary functions such as play, pause, stop)
   * Alarm
@@ -36,6 +34,7 @@ A GUI named hedge for smartwatch like devices based on ESP32. Currently support 
   * Weather
   * Calendar
   * IR remote
+  * BTC/XMR price in USD
   * ...
 
 * Companion apps: Gadgetbridge
@@ -107,46 +106,5 @@ Cf. [contribution guide](CONTRIBUTING.md)
 ![screenshot](images/screen11.png)
 ![screenshot](images/screen12.png)
 
-## TTGO T-Watch 2021
 
-![screenshot](images/twatch2021_img1.png)
-![screenshot](images/twatch2021_img2.png)
-![screenshot](images/twatch2021_img3.png)
-
-# Contributors
-
-Special thanks to the following people for their help:
-
-[5tormChild](https://github.com/5tormChild)<br>
-[bwagstaff](https://github.com/bwagstaff)<br>
-[chrismcna](https://github.com/chrismcna)<br>
-[datacute](https://github.com/datacute)<br>
-[fliuzzi02](https://github.com/fliuzzi02)<br>
-[guyou](https://github.com/guyou)<br>
-[jakub-vesely](https://github.com/jakub-vesely)<br>
-[joshvito](https://github.com/joshvito)<br>
-[JoanMCD](https://github.com/JoanMCD)<br>
-[NorthernDIY](https://github.com/NorthernDIY)<br>
-[Neuroplant](https://github.com/Neuroplant)<br>
-[paulstueber](https://github.com/paulstueber)<br>
-[pavelmachek](https://github.com/pavelmachek)<br>
-[rnisthal](https://github.com/rnisthal)<br>
-[ssspeq](https://github.com/ssspeq)<br>
-
-and the following projects:
-
-[ArduinoJson](https://github.com/bblanchon/ArduinoJson)<br>
-[AsyncTCP](https://github.com/me-no-dev/AsyncTCP)<br>
-[ESP32SSDP](https://github.com/luc-github/ESP32SSDP)<br>
-[ESP32-targz](https://github.com/tobozo/ESP32-targz)<br>
-[ESP8266Audio](https://github.com/earlephilhower/ESP8266Audio)<br>
-[ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer)<br>
-[LVGL](https://github.com/lvgl)<br>
-[NimBLE-Arduino]()h2zero/NimBLE-Arduino<br>
-[pubsubclient](https://github.com/knolleary/pubsubclient)<br>
-[TinyGPSPlus](mikalhart/TinyGPSPlus)<br>
-[TFT_eSPI](https://github.com/Bodmer/TFT_eSPI)<br>
-[TTGO_TWatch_Library](https://github.com/Xinyuan-LilyGO/TTGO_TWatch_Library)<br>
-
-Every Contribution to this repository is highly welcome! Don't fear to create pull requests which enhance or fix the project, you are going to help everybody.
 
